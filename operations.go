@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 )
@@ -29,4 +30,35 @@ func (s *Store) buildIndex() error {
 	}
 
 	return nil
+}
+
+func (s *Store) writeRecord(record *Record) (int64, error) {
+	totalSize := headerSize + len(record.Key) + len(record.Value)
+	buf := make([]byte, totalSize)
+
+	binary.BigEndian.PutUint32(buf[0:4], record.Timestamp)
+
+	binary.BigEndian.PutUint32(buf[4:8], uint32(len(record.Key)))
+
+	binary.BigEndian.PutUint32(buf[8:12], uint32(len(record.Value)))
+
+	if record.TombStone {
+		buf[12] = 1
+	} else {
+		buf[12] = 0
+	}
+
+	copy(buf[headerSize:headerSize+len(record.Key)], record.Key)
+	copy(buf[headerSize+len(record.Key):], record.Value)
+
+	offset, err := s.file.Seek(0, io.SeekEnd)
+	if err != nil {
+		return 0, err
+	}
+
+	if _, err := s.file.Write(buf); err != nil {
+		return 0, err
+	}
+
+	return offset, nil
 }
