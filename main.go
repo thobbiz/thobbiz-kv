@@ -24,3 +24,37 @@ func Open(filename string) (*KVStore, error) {
 
 	return KVStore, nil
 }
+
+func (kv *KVStore) Close() error {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	if kv.file != nil {
+		return kv.file.Close()
+	}
+	return nil
+}
+
+func main() {
+	kvStore, _ := Open("store.db")
+	defer kvStore.Close()
+
+	// Put data
+	_ = kvStore.Put([]byte("God"), []byte("Greatest"))
+	_ = kvStore.Put([]byte("Me"), []byte("Sad"))
+
+	// Retrieve data
+	value, _ := kvStore.Get([]byte("God"))
+	fmt.Printf("God => %s\n", value)
+
+	value, _ = kvStore.Get([]byte("Me"))
+	fmt.Printf("Me => %s\n", value)
+
+	// update value
+	_ = kvStore.Put([]byte("Me"), []byte("Wild"))
+	value, _ = kvStore.Get([]byte("Me"))
+	fmt.Printf("Me => %s\n", value)
+
+	// delete data
+	_ = kvStore.Delete([]byte("Tojumi"))
+}

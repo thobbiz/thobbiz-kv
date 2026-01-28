@@ -20,7 +20,7 @@ func (kv *KVStore) buildIndex() error {
 			return fmt.Errorf("failed to read record: %v", err)
 		}
 
-		if record.Tombstone {
+		if record.TombStone {
 			kv.index[string(record.Key)] = tombStoneOffset
 		} else {
 			kv.index[string(record.Key)] = offset

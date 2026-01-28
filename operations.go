@@ -33,11 +33,11 @@ func (kv *KVStore) Get(key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("key cannot be empty")
 	}
 
-	kv.mu.Lock()
+	kv.mu.RLock()
 	defer kv.mu.RUnlock()
 
 	offset, exists := kv.index[string(key)]
-	if !exists || offset == tombstoneOffset {
+	if !exists || offset == tombStoneOffset {
 		return nil, fmt.Errorf("key not found: %s", key)
 	}
 
@@ -47,4 +47,26 @@ func (kv *KVStore) Get(key []byte) ([]byte, error) {
 	}
 
 	return record.Value, nil
+}
+
+func (kv *KVStore) Delete(key []byte) error {
+	if len(key) == 0 {
+		return fmt.Errorf("key cannot be empty")
+	}
+
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	record := Record{
+		Key:       key,
+		TombStone: true,
+		Timestamp: uint32(time.Now().Unix()),
+	}
+
+	_, err := kv.writeRecord(&record)
+	if err != nil {
+		return fmt.Errorf("failed to write record: %w", err)
+	}
+
+	kv.index[string(key)] = tombStoneOffset
+	return nil
 }

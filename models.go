@@ -5,6 +5,9 @@ import (
 	"sync"
 )
 
+const headerSize = 13
+const tombStoneOffset = -1
+
 type KVStore struct {
 	filename string
 	file     *os.File
