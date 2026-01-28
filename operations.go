@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"time"
 )
 
 func (kv *KVStore) buildIndex() error {
@@ -113,4 +114,27 @@ func (kv *KVStore) readRecord(offset int64) (*Record, error) {
 	record.Value = value
 
 	return record, nil
+}
+
+func (kv *KVStore) putRecord(key, value []byte) error {
+	if len(key) == 0 {
+		return fmt.Errorf("key cannot be empty")
+	}
+
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	record := &Record{
+		Key:       key,
+		Value:     value,
+		Timestamp: uint32(time.Now().Unix()),
+	}
+
+	offset, err := kv.writeRecord(record)
+	if err != nil {
+		return fmt.Errorf("failed to write record: %w", err)
+	}
+
+	kv.index[string(key)] = offset
+	return nil
 }
