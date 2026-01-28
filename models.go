@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-type Store struct {
+type KVStore struct {
 	filename string
 	file     *os.File
 	mu       sync.RWMutex
