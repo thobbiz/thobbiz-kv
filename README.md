@@ -1,5 +1,5 @@
 # thobbizKV
-thobbizKV is an LHST and append-only key value store written in Go and based on the Bitcask model.
+thobbizKV is an LSHT and append-only key value store written in Go and based on the Bitcask model.
 I built it as a fun project to expand my horizon on using go as a systems language
 
 ## Features
