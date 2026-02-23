@@ -3,18 +3,29 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/thobbiz/thobbixDB/helpers"
 )
 
-func Open(filename string) (*KVStore, error) {
-	file, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0666)
+func Open(filepath string) (*KVStore, error) {
+	file, fileID, err := NewFile(filepath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %w", err)
+		return nil, err
 	}
 
 	KVStore := &KVStore{
-		filename: filename,
-		file:     file,
-		index:    make(map[string]int64),
+		file: file,
+		keyTable: KeyTable{
+			keyOffsetMap: make(map[string]int64),
+		},
+		DataSegments: &DataSegments{
+			activeDS: &DataSegment{
+				file:   file,
+				fileId: fileID,
+			},
+			inactiveDS:     make(map[uint64]*DataSegment),
+			maxDSSizeBytes: MaxFileSize,
+		},
 	}
 
 	if err := KVStore.buildIndex(); err != nil {
@@ -23,6 +34,20 @@ func Open(filename string) (*KVStore, error) {
 	}
 
 	return KVStore, nil
+}
+
+func NewFile(filepath string) (*os.File, uint64, error) {
+	file, err := os.OpenFile(filepath, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to open file: %w", err)
+	}
+
+	fileID, err := helpers.GenerateRandomID()
+	if err != nil {
+		return nil, 0, fmt.Errorf("Error occured while generating file ID: %v", err)
+	}
+
+	return file, fileID, nil
 }
 
 func (kv *KVStore) Close() error {
@@ -38,9 +63,11 @@ func (kv *KVStore) Close() error {
 func main() {
 	kvStore, _ := Open("store.db")
 	defer kvStore.Close()
+	fmt.Println("Opened db")
 
 	// Put data
 	_ = kvStore.Put([]byte("God"), []byte("Greatest"))
+	fmt.Println("Put data")
 	_ = kvStore.Put([]byte("Me"), []byte("Sad"))
 
 	// Retrieve data
@@ -57,4 +84,6 @@ func main() {
 
 	// delete data
 	_ = kvStore.Delete([]byte("Tojumi"))
+	value, err := kvStore.Get([]byte("Tojumi"))
+	fmt.Print(err)
 }

@@ -14,6 +14,7 @@ func (kv *KVStore) Put(key, value []byte) error {
 	defer kv.mu.Unlock()
 
 	record := &Record{
+		FileId:    kv.DataSegments.activeDS.fileId,
 		Key:       key,
 		Value:     value,
 		Timestamp: uint32(time.Now().Unix()),
@@ -24,7 +25,8 @@ func (kv *KVStore) Put(key, value []byte) error {
 		return fmt.Errorf("failed to write record: %w", err)
 	}
 
-	kv.index[string(key)] = offset
+	kv.keyTable.keyOffsetMap[string(key)] = offset
+	fmt.Println("Worked pa")
 	return nil
 }
 
@@ -36,8 +38,8 @@ func (kv *KVStore) Get(key []byte) ([]byte, error) {
 	kv.mu.RLock()
 	defer kv.mu.RUnlock()
 
-	offset, exists := kv.index[string(key)]
-	if !exists || offset == tombStoneOffset {
+	offset, exists := kv.keyTable.keyOffsetMap[string(key)]
+	if !exists || offset == TombStoneOffset {
 		return nil, fmt.Errorf("key not found: %s", key)
 	}
 
@@ -67,6 +69,7 @@ func (kv *KVStore) Delete(key []byte) error {
 		return fmt.Errorf("failed to write record: %w", err)
 	}
 
-	kv.index[string(key)] = tombStoneOffset
+	delete(kv.keyTable.keyOffsetMap, string(key))
+	// kv.index[string(key)] = tombStoneOffset
 	return nil
 }
