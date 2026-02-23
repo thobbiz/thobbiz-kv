@@ -135,7 +135,7 @@ func (dataSegment *DataSegment) append(buf []byte) (int64, error) {
 
 	offset, err := dataSegment.file.Seek(0, io.SeekEnd)
 	if err != nil {
-		return 0, fmt.Errorf("Couldn't get file offet: %v", err)
+		return 0, fmt.Errorf("Couldn't get file offset: %v", err)
 	}
 
 	return offset, nil
