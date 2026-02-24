@@ -1,4 +1,4 @@
-package main
+package definitions
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ func (kv *KVStore) Put(key, value []byte) error {
 	defer kv.mu.Unlock()
 
 	record := &Record{
-		FileId:    kv.DataSegments.activeDS.fileId,
+		FileId:    kv.dataSegments.activeDS.fileId,
 		Key:       key,
 		Value:     value,
 		Timestamp: uint32(time.Now().Unix()),

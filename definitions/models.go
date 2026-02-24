@@ -1,4 +1,4 @@
-package main
+package definitions
 
 import (
 	"os"
@@ -17,7 +17,7 @@ type KVStore struct {
 	file         *os.File
 	mu           sync.RWMutex
 	keyTable     KeyTable
-	DataSegments *DataSegments
+	dataSegments *DataSegments
 }
 
 type KeyTable struct {
@@ -47,4 +47,33 @@ type Record struct {
 	Value     []byte
 	Timestamp uint32
 	TombStone bool
+}
+
+func NewStore(file *os.File, fileID uint64) *KVStore {
+	KVStore := &KVStore{
+		file: file,
+		keyTable: KeyTable{
+			keyOffsetMap: make(map[string]int64),
+		},
+		dataSegments: &DataSegments{
+			activeDS: &DataSegment{
+				file:   file,
+				fileId: fileID,
+			},
+			inactiveDS:     make(map[uint64]*DataSegment),
+			maxDSSizeBytes: MaxFileSize,
+		},
+	}
+
+	return KVStore
+}
+
+func (kv *KVStore) Close() error {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+
+	if kv.file != nil {
+		return kv.file.Close()
+	}
+	return nil
 }

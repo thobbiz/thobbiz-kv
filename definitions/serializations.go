@@ -1,13 +1,15 @@
-package main
+package definitions
 
 import (
 	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/thobbiz/thobbixDB/helpers"
 )
 
-func (kv *KVStore) buildIndex() error {
+func (kv *KVStore) BuildIndex() error {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
@@ -54,7 +56,7 @@ func (kv *KVStore) writeRecord(record *Record) (int64, error) {
 	copy(buf[HeaderSize:HeaderSize+len(record.Key)], record.Key)
 	copy(buf[HeaderSize+len(record.Key):], record.Value)
 
-	return kv.DataSegments.activeDS.append(buf)
+	return kv.dataSegments.activeDS.append(buf)
 }
 
 func (kv *KVStore) readRecord(offset int64) (*Record, error) {
@@ -109,13 +111,29 @@ func (kv *KVStore) readRecord(offset int64) (*Record, error) {
 	return record, nil
 }
 
-func (dataSegments *DataSegments) Append(buf []byte) (int64, error) {
-	if noIssues, err := dataSegments.checkIfRolloverActiveSegment(buf); err != nil {
-		if noIssues {
+func (dataSegments *DataSegments) append(buf []byte) (int64, error) {
+	maxSizeReached, err := dataSegments.checkIfRolloverActiveSegment(buf)
+	if err != nil {
+		if maxSizeReached {
 			// Archive old file
 			dataSegments.inactiveDS[dataSegments.activeDS.fileId] = dataSegments.activeDS
 			// Open a new file
+			currentNo := len(dataSegments.inactiveDS) + 1
+			fileName := helpers.GenerateRandomFileName(currentNo)
+			newFile, newFileId, err := helpers.NewFile(fileName)
+			if err != nil {
+				return 0, err
+			}
 
+			// create new datasegment and replace active DS
+			activeDs := DataSegment{
+				file:   newFile,
+				fileId: newFileId,
+			}
+			dataSegments.activeDS = &activeDs
+
+			// append buf to new File
+			return dataSegments.activeDS.append(buf)
 		}
 		return 0, err
 	}
