@@ -43,7 +43,7 @@ func (kv *KVStore) writeRecord(record *Record) (int64, error) {
 	buf := make([]byte, totalSize)
 
 	// put fileID - 8 bytes
-	binary.BigEndian.PutUint32(buf[0:8], uint32(record.FileId))
+	binary.BigEndian.PutUint64(buf[0:8], record.FileId)
 
 	// put timestamp - 4 bytes
 	binary.BigEndian.PutUint32(buf[8:12], record.Timestamp)
