@@ -2,51 +2,30 @@ package main
 
 import (
 	"fmt"
+	"log"
 
 	models "github.com/thobbiz/thobbixDB/definitions"
-	"github.com/thobbiz/thobbixDB/helpers"
 )
 
-func Open(filepath string) (*models.KVStore, error) {
-	file, fileID, err := helpers.NewFile(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	KVStore := models.NewStore(file, fileID)
-
-	if err := KVStore.BuildIndex(); err != nil {
-		file.Close()
-		return nil, fmt.Errorf("failed to rebuild index: %w", err)
-	}
-
-	return KVStore, nil
-}
-
 func main() {
-	kvStore, _ := Open("store.db")
+	kvStore, _ := models.Open("./data")
+	fmt.Println("--Opened KV--")
 	defer kvStore.Close()
-	fmt.Println("Opened db")
 
 	// Put data
 	_ = kvStore.Put([]byte("God"), []byte("Greatest"))
-	fmt.Println("Put data")
-	_ = kvStore.Put([]byte("Me"), []byte("Sad"))
+	fmt.Println("- Insert Data")
 
 	// Retrieve data
-	value, _ := kvStore.Get([]byte("God"))
+	value, err := kvStore.Get([]byte("God"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("- Retrieved Data \n")
 	fmt.Printf("God => %s\n", value)
 
-	value, _ = kvStore.Get([]byte("Me"))
-	fmt.Printf("Me => %s\n", value)
-
-	// update value
-	_ = kvStore.Put([]byte("Me"), []byte("Wild"))
-	value, _ = kvStore.Get([]byte("Me"))
-	fmt.Printf("Me => %s\n", value)
-
 	// delete data
-	_ = kvStore.Delete([]byte("Tojumi"))
-	value, err := kvStore.Get([]byte("Tojumi"))
-	fmt.Print(err)
+	_ = kvStore.Delete([]byte("God"))
+	_, err = kvStore.Get([]byte("God"))
+	fmt.Println(err)
 }

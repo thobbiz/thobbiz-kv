@@ -26,10 +26,12 @@ func (kv *KVStore) Put(key, value []byte) error {
 	}
 
 	kv.keyTable.keyOffsetMap[string(key)] = offset
-	fmt.Println("Worked pa")
 	return nil
 }
 
+// Get takes the Key passed to it to retrieve the offset from the
+//
+// in-memory map then use it to retrieve the value from the data file
 func (kv *KVStore) Get(key []byte) ([]byte, error) {
 	if len(key) == 0 {
 		return nil, fmt.Errorf("key cannot be empty")
@@ -51,6 +53,9 @@ func (kv *KVStore) Get(key []byte) ([]byte, error) {
 	return record.Value, nil
 }
 
+// Delete takes the Key passed to it to insert a tombstone offset to the
+//
+// in-memory map it then use it to retrieve the value from the data file
 func (kv *KVStore) Delete(key []byte) error {
 	if len(key) == 0 {
 		return fmt.Errorf("key cannot be empty")
@@ -70,6 +75,6 @@ func (kv *KVStore) Delete(key []byte) error {
 	}
 
 	delete(kv.keyTable.keyOffsetMap, string(key))
-	// kv.index[string(key)] = tombStoneOffset
+	kv.keyTable.keyOffsetMap[string(key)] = TombStoneOffset
 	return nil
 }
