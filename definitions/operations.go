@@ -20,12 +20,12 @@ func (kv *KVStore) Put(key, value []byte) error {
 		Timestamp: uint32(time.Now().Unix()),
 	}
 
-	offset, err := kv.writeRecord(record)
+	appendRecordResponse, err := kv.writeRecord(record)
 	if err != nil {
 		return fmt.Errorf("failed to write record: %w", err)
 	}
 
-	kv.keyTable.keyOffsetMap[string(key)] = offset
+	kv.keyTable.keyOffsetMap[string(key)] = *appendRecordResponse
 	return nil
 }
 
@@ -40,12 +40,12 @@ func (kv *KVStore) Get(key []byte) ([]byte, error) {
 	kv.mu.RLock()
 	defer kv.mu.RUnlock()
 
-	offset, exists := kv.keyTable.keyOffsetMap[string(key)]
-	if !exists || offset == TombStoneOffset {
+	appendRecordResponse, exists := kv.keyTable.keyOffsetMap[string(key)]
+	if !exists || appendRecordResponse.Offset == TombStoneOffset {
 		return nil, fmt.Errorf("key not found: %s", key)
 	}
 
-	record, err := kv.readRecord(offset)
+	record, err := kv.readRecord(appendRecordResponse.Offset, appendRecordResponse.FileId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read record: %w", err)
 	}
@@ -75,6 +75,6 @@ func (kv *KVStore) Delete(key []byte) error {
 	}
 
 	delete(kv.keyTable.keyOffsetMap, string(key))
-	kv.keyTable.keyOffsetMap[string(key)] = TombStoneOffset
+	kv.keyTable.keyOffsetMap[string(key)] = AppendRecordResponse{Offset: TombStoneOffset}
 	return nil
 }

@@ -27,7 +27,7 @@ type KVStore struct {
 }
 
 type KeyTable struct {
-	keyOffsetMap map[string]int64
+	keyOffsetMap map[string]AppendRecordResponse
 }
 
 type DataSegments struct {
@@ -41,10 +41,9 @@ type DataSegment struct {
 	fileId uint64
 }
 
-type AppendEntryResponse struct {
-	FileId      uint64
-	Offset      int64
-	EntryLength uint32
+type AppendRecordResponse struct {
+	FileId uint64
+	Offset int64
 }
 
 type Record struct {
@@ -58,7 +57,7 @@ type Record struct {
 func NewStore() *KVStore {
 	KVStore := &KVStore{
 		keyTable: KeyTable{
-			keyOffsetMap: make(map[string]int64),
+			keyOffsetMap: make(map[string]AppendRecordResponse),
 		},
 		dataSegments: &DataSegments{
 			activeDS:       &DataSegment{},
@@ -122,6 +121,8 @@ func Open(dataDir string) (*KVStore, error) {
 				kv.dataSegments.inactiveDS[id] = ds
 			}
 
+			// Building Index
+			fmt.Println("-- Building Index")
 			if err := kv.BuildIndex(); err != nil {
 				file.Close()
 				return nil, fmt.Errorf("failed to rebuild index: %w", err)

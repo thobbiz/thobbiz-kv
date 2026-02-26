@@ -2,6 +2,7 @@ package definitions
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,22 +15,26 @@ func (kv *KVStore) BuildIndex() error {
 	defer kv.mu.Unlock()
 
 	var offset int64
-	for {
-		record, err := kv.readRecord(offset)
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return fmt.Errorf("failed to read record: %v", err)
-		}
 
-		if record.TombStone {
-			kv.keyTable.keyOffsetMap[string(record.Key)] = TombStoneOffset
-		} else {
-			kv.keyTable.keyOffsetMap[string(record.Key)] = offset
-		}
+	// build index for inactive Data segments
+	for _, value := range kv.dataSegments.inactiveDS {
+		for {
+			record, err := kv.readRecord(offset, value.fileId)
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return fmt.Errorf("failed to read record: %v", err)
+			}
 
-		offset += int64(HeaderSize + len(record.Key) + len(record.Value))
+			if record.TombStone {
+				kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: TombStoneOffset}
+			} else {
+				kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: offset}
+			}
+
+			offset += int64(HeaderSize + len(record.Key) + len(record.Value))
+		}
 	}
 
 	return nil
@@ -38,7 +43,7 @@ func (kv *KVStore) BuildIndex() error {
 // writeRecord inserts a record into the dataSegments active datafile,
 //
 // inserts the offset to the keyTable map and returns it
-func (kv *KVStore) writeRecord(record *Record) (int64, error) {
+func (kv *KVStore) writeRecord(record *Record) (*AppendRecordResponse, error) {
 	totalSize := HeaderSize + len(record.Key) + len(record.Value)
 	buf := make([]byte, totalSize)
 
@@ -64,17 +69,22 @@ func (kv *KVStore) writeRecord(record *Record) (int64, error) {
 	copy(buf[HeaderSize:HeaderSize+len(record.Key)], record.Key)
 	copy(buf[HeaderSize+len(record.Key):], record.Value)
 
-	offset, err := kv.dataSegments.append(buf)
+	appendRecordResponse, err := kv.dataSegments.append(buf)
 
-	return offset, err
+	return appendRecordResponse, err
 }
 
-func (kv *KVStore) readRecord(offset int64) (*Record, error) {
-	if _, err := kv.dataSegments.activeDS.file.Seek(offset, io.SeekStart); err != nil {
+func (kv *KVStore) readRecord(offset int64, dataSegmentFileID uint64) (*Record, error) {
+	dataSegementFile, err := kv.findDataSegment(dataSegmentFileID)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := dataSegementFile.Seek(offset, io.SeekStart); err != nil {
 		return nil, fmt.Errorf("failed to seek: %w \n", err)
 	}
 
-	fileInfo, err := os.Stat(kv.dataSegments.activeDS.file.Name())
+	fileInfo, err := os.Stat(dataSegementFile.Name())
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't check file stats: %v \n", err)
 	}
@@ -136,8 +146,25 @@ func (kv *KVStore) readRecord(offset int64) (*Record, error) {
 	return record, nil
 }
 
+// finds and returns DataSegment with the fileID
+func (kv *KVStore) findDataSegment(fileID uint64) (*os.File, error) {
+	// check if file is the active dataSegment
+	if kv.dataSegments.activeDS.fileId == fileID {
+		return kv.dataSegments.activeDS.file, nil
+	}
+
+	// check file is in the inactive DataSegments
+	for _, value := range kv.dataSegments.inactiveDS {
+		if value.fileId == fileID {
+			return value.file, nil
+		}
+	}
+
+	return nil, errors.New("Data Segment couldn't be found")
+}
+
 // append rollovers a dataSegment if it has reached its limit and appends a buffer to the active dataSegment
-func (dataSegments *DataSegments) append(buf []byte) (int64, error) {
+func (dataSegments *DataSegments) append(buf []byte) (*AppendRecordResponse, error) {
 	maxSizeReached, err := dataSegments.checkIfRolloverActiveSegment(buf)
 	if err != nil {
 		if maxSizeReached {
@@ -148,7 +175,7 @@ func (dataSegments *DataSegments) append(buf []byte) (int64, error) {
 			fileName := helpers.GenerateFileName(currentNo)
 			newFile, newFileId, err := helpers.NewFile(fileName)
 			if err != nil {
-				return 0, err
+				return nil, err
 			}
 
 			// create new datasegment and replace active DS
@@ -161,29 +188,34 @@ func (dataSegments *DataSegments) append(buf []byte) (int64, error) {
 			// append buf to new File
 			return dataSegments.activeDS.append(buf)
 		}
-		return 0, err
+		return nil, err
 	}
 
 	return dataSegments.activeDS.append(buf)
 }
 
 // append a buffer byte to a dataSegment file
-func (dataSegment *DataSegment) append(buf []byte) (int64, error) {
+func (dataSegment *DataSegment) append(buf []byte) (*AppendRecordResponse, error) {
 	offset, err := dataSegment.file.Seek(0, io.SeekEnd)
 	if err != nil {
-		return 0, fmt.Errorf("Couldn't get file offset: %v", err)
+		return nil, fmt.Errorf("Couldn't get file offset: %v", err)
 	}
 
 	bytesWritten, err := dataSegment.file.Write(buf)
 	if err != nil {
-		return 0, fmt.Errorf("Failed to write to file: %v", err)
+		return nil, fmt.Errorf("Failed to write to file: %v", err)
 	}
 
 	if bytesWritten < len(buf) {
-		return 0, fmt.Errorf("Could not append %v bytes", len(buf))
+		return nil, fmt.Errorf("Could not append %v bytes", len(buf))
 	}
 
-	return offset, nil
+	result := AppendRecordResponse{
+		FileId: dataSegment.fileId,
+		Offset: offset,
+	}
+
+	return &result, nil
 }
 
 // checkIfRolloverActiveSegment check if a dataSegments active dataSegments has reached
