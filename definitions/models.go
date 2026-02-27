@@ -122,7 +122,6 @@ func Open(dataDir string) (*KVStore, error) {
 			}
 
 			// Building Index
-			fmt.Println("-- Building Index")
 			if err := kv.BuildIndex(); err != nil {
 				file.Close()
 				return nil, fmt.Errorf("failed to rebuild index: %w", err)

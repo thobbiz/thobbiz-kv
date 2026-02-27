@@ -8,24 +8,36 @@ import (
 )
 
 func main() {
-	kvStore, _ := models.Open("./data")
-	fmt.Println("--Opened KV--")
+	kvStore, err := models.Open("./data")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("--Opened KV--")
 	defer kvStore.Close()
 
 	// Put data
-	_ = kvStore.Put([]byte("God"), []byte("Greatest"))
-	fmt.Println("- Insert Data")
+	err = kvStore.Put([]byte("God"), []byte("Greatest"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("-- Insert Data")
 
 	// Retrieve data
 	value, err := kvStore.Get([]byte("God"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("- Retrieved Data \n")
+	log.Printf("-- Retrieved Data \n")
 	fmt.Printf("God => %s\n", value)
 
 	// delete data
-	_ = kvStore.Delete([]byte("God"))
+	log.Println("-- Deleted Data")
+	err = kvStore.Delete([]byte("God"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	_, err = kvStore.Get([]byte("God"))
-	fmt.Println(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
