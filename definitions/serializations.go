@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/thobbiz/thobbixDB/helpers"
 )
 
 func (kv *KVStore) BuildIndex() error {
+	log.Println("-- Building Index")
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
@@ -75,73 +77,35 @@ func (kv *KVStore) writeRecord(record *Record) (*AppendRecordResponse, error) {
 }
 
 func (kv *KVStore) readRecord(offset int64, dataSegmentFileID uint64) (*Record, error) {
-	dataSegementFile, err := kv.findDataSegment(dataSegmentFileID)
+	dataSegmentFile, err := kv.findDataSegment(dataSegmentFileID)
 	if err != nil {
 		return nil, err
 	}
 
-	if _, err := dataSegementFile.Seek(offset, io.SeekStart); err != nil {
-		return nil, fmt.Errorf("failed to seek: %w \n", err)
-	}
-
-	fileInfo, err := os.Stat(dataSegementFile.Name())
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't check file stats: %v \n", err)
-	}
-	if (offset) > fileInfo.Size() {
-		return nil, fmt.Errorf("File is too small, offset is %d and file size is %d \n", offset, fileInfo.Size())
+	headerBuf := make([]byte, HeaderSize)
+	if _, err := dataSegmentFile.ReadAt(headerBuf, offset); err != nil {
+		return nil, fmt.Errorf("failed to read Header: %w", err)
 	}
 
 	record := &Record{}
-
 	// read file ID (8 bytes)
-	fileID := make([]byte, 8)
-	if _, err := kv.dataSegments.activeDS.file.Read(fileID); err != nil {
-		return nil, err
-	}
-	record.FileId = uint64(binary.BigEndian.Uint64(fileID))
-
+	record.FileId = uint64(binary.BigEndian.Uint64(headerBuf[0:8]))
 	// read the timestamp (4 bytes)
-	timestampBuf := make([]byte, 4)
-	if _, err := kv.dataSegments.activeDS.file.Read(timestampBuf); err != nil {
-		return nil, err
-	}
-	record.Timestamp = binary.BigEndian.Uint32(timestampBuf)
-
+	record.Timestamp = binary.BigEndian.Uint32(headerBuf[8:12])
 	// read the key len (4 bytes)
-	keyLenBuf := make([]byte, 4)
-	if _, err := kv.dataSegments.activeDS.file.Read(keyLenBuf); err != nil {
-		return nil, err
-	}
-	keyLen := binary.BigEndian.Uint32(keyLenBuf)
-
+	keyLen := binary.BigEndian.Uint32(headerBuf[12:16])
 	// read the value len (4 bytes)
-	valueLenBuf := make([]byte, 4)
-	if _, err := kv.dataSegments.activeDS.file.Read(valueLenBuf); err != nil {
-		return nil, err
-	}
-	valueLen := binary.BigEndian.Uint32(valueLenBuf)
-
+	valueLen := binary.BigEndian.Uint32(headerBuf[16:20])
 	// read the tombstone (1 byte)
-	tombStoneBuf := make([]byte, 1)
-	if _, err := kv.dataSegments.activeDS.file.Read(tombStoneBuf); err != nil {
-		return nil, err
-	}
-	record.TombStone = tombStoneBuf[0] == 1
+	record.TombStone = headerBuf[20] == 1
 
-	// read key data
-	key := make([]byte, keyLen)
-	if _, err := kv.dataSegments.activeDS.file.Read(key); err != nil {
-		return nil, err
+	bodyBuf := make([]byte, keyLen+valueLen)
+	if _, err := dataSegmentFile.ReadAt(bodyBuf, offset+HeaderSize); err != nil {
+		return nil, fmt.Errorf("failed to read body: %w", err)
 	}
-	record.Key = key
 
-	// read value data
-	value := make([]byte, valueLen)
-	if _, err := kv.dataSegments.activeDS.file.Read(value); err != nil {
-		return nil, err
-	}
-	record.Value = value
+	record.Key = bodyBuf[:keyLen]
+	record.Value = bodyBuf[keyLen:]
 
 	return record, nil
 }
