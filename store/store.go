@@ -63,7 +63,10 @@ func Open(dataDir string) (*KVStore, error) {
 			}
 
 			// Extract ID from filename
-			id := uint64(i + 1)
+			id, err := fileutil.GenerateRandomID()
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate file id: %v", err)
+			}
 			ds := &DataSegment{file: file, fileId: id}
 
 			// If it's the last file, it's the active one
@@ -77,7 +80,7 @@ func Open(dataDir string) (*KVStore, error) {
 
 		// Build Index
 		if err := kv.BuildIndex(); err != nil {
-			return nil, fmt.Errorf("failed to rebuild index: %w", err)
+			return nil, err
 		}
 	}
 

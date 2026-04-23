@@ -55,7 +55,7 @@ func (dataSegments *DataSegments) append(buf []byte) (*AppendRecordResponse, err
 	return dataSegments.activeDS.append(buf)
 }
 
-// append a buffer byte to a dataSegment file
+// appends a buffer byte to a data segment file
 func (dataSegment *DataSegment) append(buf []byte) (*AppendRecordResponse, error) {
 	offset, err := dataSegment.file.Seek(0, io.SeekEnd)
 	if err != nil {
@@ -79,7 +79,7 @@ func (dataSegment *DataSegment) append(buf []byte) (*AppendRecordResponse, error
 	return &result, nil
 }
 
-// checkIfRolloverActiveSegment check if a dataSegments active dataSegments has reached
+// checkIfRolloverActiveSegment checks if the active data segment has reached
 // its limits
 func (dataSegments *DataSegments) checkIfRolloverActiveSegment(buf []byte) (bool, error) {
 	info, err := os.Stat(dataSegments.activeDS.file.Name())
@@ -93,7 +93,7 @@ func (dataSegments *DataSegments) checkIfRolloverActiveSegment(buf []byte) (bool
 	return false, nil
 }
 
-// finds and returns DataSegment with the fileID
+// finds and returns the data segment with the fileID
 func (kv *KVStore) findDataSegment(fileID uint64) (*os.File, error) {
 	// check if file is the active dataSegment
 	if kv.dataSegments.activeDS.fileId == fileID {
@@ -107,5 +107,5 @@ func (kv *KVStore) findDataSegment(fileID uint64) (*os.File, error) {
 		}
 	}
 
-	return nil, errors.New("Data Segment couldn't be found")
+	return nil, errors.New("data segment couldn't be found")
 }

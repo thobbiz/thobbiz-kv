@@ -15,14 +15,14 @@ func main() {
 	log.Println("--Opened KV--")
 	defer kvStore.Close()
 
-	// Put data
+	// INSERT/EDIT DATA
 	err = kvStore.Put([]byte("God"), []byte("Greatest"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Println("-- Insert Data")
 
-	// Retrieve data
+	// RETRIEVE DATA
 	value, err := kvStore.Get([]byte("God"))
 	if err != nil {
 		log.Fatal(err)
@@ -30,7 +30,7 @@ func main() {
 	log.Printf("-- Retrieved Data \n")
 	fmt.Printf("God => %s\n", value)
 
-	// delete data
+	// DELETE DATA
 	log.Println("-- Deleted Data")
 	err = kvStore.Delete([]byte("God"))
 	if err != nil {

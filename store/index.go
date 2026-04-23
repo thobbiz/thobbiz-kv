@@ -24,33 +24,34 @@ func (kv *KVStore) BuildIndex() error {
 				break
 			}
 			if err != nil {
-				return fmt.Errorf("failed to read record: %v", err)
+				return fmt.Errorf("failed to build index for segment %d: %v", ds.fileId, err)
 			}
 
 			if record.TombStone {
-				kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: TombStoneOffset}
+				kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{FileId: ds.fileId, Offset: TombStoneOffset}
 			} else {
-				kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: offset}
+				kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{FileId: ds.fileId, Offset: offset}
 			}
 
 			offset += int64(HeaderSize + len(record.Key) + len(record.Value))
 		}
 	}
 
-	var offset int64
+	var offset int64 = 0
+	activeDS := kv.dataSegments.activeDS
 	for {
-		record, err := kv.readRecord(offset, kv.dataSegments.activeDS.fileId)
+		record, err := kv.readRecord(offset, activeDS.fileId)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("failed to read record from active segement: %v", err)
+			return fmt.Errorf("failed to build index for active data segment: %v", err)
 		}
 
 		if record.TombStone {
-			kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: TombStoneOffset}
+			kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{FileId: activeDS.fileId, Offset: TombStoneOffset}
 		} else {
-			kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: offset}
+			kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{FileId: activeDS.fileId, Offset: offset}
 		}
 
 		offset += int64(HeaderSize + len(record.Key) + len(record.Value))

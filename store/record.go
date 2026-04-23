@@ -3,6 +3,8 @@ package store
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
+	"os"
 )
 
 type Record struct {
@@ -47,15 +49,24 @@ func (kv *KVStore) writeRecord(record *Record) (*AppendRecordResponse, error) {
 	return appendRecordResponse, err
 }
 
-func (kv *KVStore) readRecord(offset int64, dataSegmentFileID uint64) (*Record, error) {
-	dataSegmentFile, err := kv.findDataSegment(dataSegmentFileID)
+func (kv *KVStore) readRecord(offset int64, dsFileID uint64) (*Record, error) {
+	dsFile, err := kv.findDataSegment(dsFileID)
 	if err != nil {
 		return nil, err
 	}
 
+	info, err := os.Stat(dsFile.Name())
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't check file stats: %v", err)
+	}
+
+	if offset == info.Size() {
+		return nil, io.EOF
+	}
+
 	headerBuf := make([]byte, HeaderSize)
-	if _, err := dataSegmentFile.ReadAt(headerBuf, offset); err != nil {
-		return nil, fmt.Errorf("failed to read Header: %w", err)
+	if _, err := dsFile.ReadAt(headerBuf, offset); err != nil {
+		return nil, fmt.Errorf("failed to read record header: %w", err)
 	}
 
 	record := &Record{}
@@ -71,8 +82,8 @@ func (kv *KVStore) readRecord(offset int64, dataSegmentFileID uint64) (*Record, 
 	record.TombStone = headerBuf[20] == 1
 
 	bodyBuf := make([]byte, keyLen+valueLen)
-	if _, err := dataSegmentFile.ReadAt(bodyBuf, offset+HeaderSize); err != nil {
-		return nil, fmt.Errorf("failed to read body: %w", err)
+	if _, err := dsFile.ReadAt(bodyBuf, offset+HeaderSize); err != nil {
+		return nil, fmt.Errorf("failed to read record body: %w", err)
 	}
 
 	record.Key = bodyBuf[:keyLen]
