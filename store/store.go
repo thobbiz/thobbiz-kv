@@ -43,8 +43,9 @@ func Open(dataDir string) (*KVStore, error) {
 	sort.Strings(fileNames)
 
 	if len(fileNames) == 0 {
-		fileName := fileutil.GenerateFileName(1)
-		file, fileID, err := fileutil.NewFile(fileName)
+		name := fileutil.GenerateFileName(1)
+		filePath := filepath.Join(dataDir, name)
+		file, fileID, err := fileutil.NewFile(filePath)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +75,7 @@ func Open(dataDir string) (*KVStore, error) {
 			}
 		}
 
-		// Building Index
+		// Build Index
 		if err := kv.BuildIndex(); err != nil {
 			return nil, fmt.Errorf("failed to rebuild index: %w", err)
 		}

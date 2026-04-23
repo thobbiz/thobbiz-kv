@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	kvStore, err := store.Open("./data")
+	kvStore, err := store.Open("./data/")
 	if err != nil {
 		log.Fatal(err)
 	}
