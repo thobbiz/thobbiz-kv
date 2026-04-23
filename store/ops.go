@@ -23,7 +23,7 @@ func (kv *KVStore) Put(key, value []byte) error {
 
 	appendRecordResponse, err := kv.writeRecord(record)
 	if err != nil {
-		return fmt.Errorf("failed to write record: %w", err)
+		return fmt.Errorf("write error: %w", err)
 	}
 
 	kv.keyTable.keyOffsetMap[string(key)] = *appendRecordResponse
@@ -46,7 +46,7 @@ func (kv *KVStore) Get(key []byte) ([]byte, error) {
 
 	record, err := kv.readRecord(appendRecordResponse.Offset, appendRecordResponse.FileId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read record: %w", err)
+		return nil, fmt.Errorf("read error: %w", err)
 	}
 
 	return record.Value, nil
@@ -68,7 +68,7 @@ func (kv *KVStore) Delete(key []byte) error {
 
 	_, err := kv.writeRecord(&record)
 	if err != nil {
-		return fmt.Errorf("failed to write record: %w", err)
+		return fmt.Errorf("delete error %w", err)
 	}
 
 	delete(kv.keyTable.keyOffsetMap, string(key))

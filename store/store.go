@@ -19,6 +19,8 @@ const (
 	TombStoneOffset = -1
 )
 
+var DataDIR string
+
 type KVStore struct {
 	mu           sync.RWMutex
 	keyTable     KeyTable
@@ -28,7 +30,8 @@ type KVStore struct {
 func Open(dataDir string) (*KVStore, error) {
 	kv := NewStore()
 
-	files, err := os.ReadDir(dataDir)
+	DataDIR = dataDir
+	files, err := os.ReadDir(DataDIR)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read data directory: %w", err)
 	}
@@ -44,7 +47,7 @@ func Open(dataDir string) (*KVStore, error) {
 
 	if len(fileNames) == 0 {
 		name := fileutil.GenerateFileName(1)
-		filePath := filepath.Join(dataDir, name)
+		filePath := filepath.Join(DataDIR, name)
 		file, fileID, err := fileutil.NewFile(filePath)
 		if err != nil {
 			return nil, err

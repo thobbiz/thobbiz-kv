@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/thobbiz/thobbixDB/internal/fileutil"
 )
@@ -33,8 +34,9 @@ func (dataSegments *DataSegments) append(buf []byte) (*AppendRecordResponse, err
 			dataSegments.inactiveDS[dataSegments.activeDS.fileId] = dataSegments.activeDS
 			// Open a new file
 			currentNo := len(dataSegments.inactiveDS) + 1
-			fileName := fileutil.GenerateFileName(currentNo)
-			newFile, newFileId, err := fileutil.NewFile(fileName)
+			name := fileutil.GenerateFileName(currentNo)
+			filePath := filepath.Join(DataDIR, name)
+			newFile, newFileId, err := fileutil.NewFile(filePath)
 			if err != nil {
 				return nil, err
 			}
@@ -59,16 +61,16 @@ func (dataSegments *DataSegments) append(buf []byte) (*AppendRecordResponse, err
 func (dataSegment *DataSegment) append(buf []byte) (*AppendRecordResponse, error) {
 	offset, err := dataSegment.file.Seek(0, io.SeekEnd)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't get file offset: %v", err)
+		return nil, fmt.Errorf("failed to get file offset: %v", err)
 	}
 
 	bytesWritten, err := dataSegment.file.Write(buf)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to write to file: %v", err)
+		return nil, fmt.Errorf("failed to write to file: %v", err)
 	}
 
 	if bytesWritten < len(buf) {
-		return nil, fmt.Errorf("Could not append %v bytes", len(buf))
+		return nil, fmt.Errorf("could not append %v bytes", len(buf))
 	}
 
 	result := AppendRecordResponse{

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/thobbiz/thobbixDB/store"
 )
@@ -20,6 +21,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	time.Sleep(100 * time.Millisecond)
 	log.Println("-- Insert Data")
 
 	// RETRIEVE DATA
@@ -36,6 +38,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// TRY TO RETRIEVE DELETED DATA
 	_, err = kvStore.Get([]byte("God"))
 	if err != nil {
 		log.Fatal(err)
