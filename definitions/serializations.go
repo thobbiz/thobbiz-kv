@@ -16,12 +16,11 @@ func (kv *KVStore) BuildIndex() error {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	var offset int64
-
 	// build index for inactive Data segments
-	for _, value := range kv.dataSegments.inactiveDS {
+	for _, ds := range kv.dataSegments.inactiveDS {
+		var offset int64
 		for {
-			record, err := kv.readRecord(offset, value.fileId)
+			record, err := kv.readRecord(offset, ds.fileId)
 			if err == io.EOF {
 				break
 			}
@@ -193,5 +192,5 @@ func (dataSegments *DataSegments) checkIfRolloverActiveSegment(buf []byte) (bool
 		return true, fmt.Errorf("Maximum file size reached: %v", err)
 	}
 
-	return true, nil
+	return false, nil
 }
