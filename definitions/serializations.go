@@ -38,6 +38,25 @@ func (kv *KVStore) BuildIndex() error {
 		}
 	}
 
+	var offset int64
+	for {
+		record, err := kv.readRecord(offset, kv.dataSegments.activeDS.fileId)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read record from active segement: %v", err)
+		}
+
+		if record.TombStone {
+			kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: TombStoneOffset}
+		} else {
+			kv.keyTable.keyOffsetMap[string(record.Key)] = AppendRecordResponse{Offset: offset}
+		}
+
+		offset += int64(HeaderSize + len(record.Key) + len(record.Value))
+	}
+
 	return nil
 }
 

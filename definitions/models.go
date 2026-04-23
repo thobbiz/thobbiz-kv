@@ -20,7 +20,6 @@ const (
 )
 
 type KVStore struct {
-	file         *os.File
 	mu           sync.RWMutex
 	keyTable     KeyTable
 	dataSegments *DataSegments
@@ -79,7 +78,7 @@ func Open(dataDir string) (*KVStore, error) {
 
 	var fileNames []string
 	for _, f := range files {
-		if !f.IsDir() && strings.HasSuffix(f.Name(), ".log") {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".db") {
 			fileNames = append(fileNames, f.Name())
 		}
 	}
@@ -107,11 +106,7 @@ func Open(dataDir string) (*KVStore, error) {
 
 			// Extract ID from filename
 			id := uint64(i + 1)
-
-			ds := &DataSegment{
-				file:   file,
-				fileId: id,
-			}
+			ds := &DataSegment{file: file, fileId: id}
 
 			// If it's the last file, it's the active one
 			if i == len(fileNames)-1 {
@@ -120,12 +115,11 @@ func Open(dataDir string) (*KVStore, error) {
 				// Otherwise, it's inactive
 				kv.dataSegments.inactiveDS[id] = ds
 			}
+		}
 
-			// Building Index
-			if err := kv.BuildIndex(); err != nil {
-				file.Close()
-				return nil, fmt.Errorf("failed to rebuild index: %w", err)
-			}
+		// Building Index
+		if err := kv.BuildIndex(); err != nil {
+			return nil, fmt.Errorf("failed to rebuild index: %w", err)
 		}
 	}
 
@@ -136,8 +130,19 @@ func (kv *KVStore) Close() error {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()
 
-	if kv.file != nil {
-		return kv.file.Close()
+	var firstErr error
+
+	for _, ds := range kv.dataSegments.inactiveDS {
+		if err := ds.file.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
 	}
-	return nil
+
+	if kv.dataSegments.activeDS != nil {
+		if err := kv.dataSegments.activeDS.file.Close(); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	return firstErr
 }
