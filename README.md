@@ -14,7 +14,6 @@ I built it as a fun project to expand my horizon on using go as a systems langua
 ### Prerequisites
 - Go 1.23 or later
 ### Installation
-
 1. Clone the repository:
    ```bash
    git clone https://github.com/thobbiz/thobbizKV.git
@@ -27,7 +26,7 @@ I built it as a fun project to expand my horizon on using go as a systems langua
     ```
 
 ### Contributing
-Contributions are welcome! Feel free to fork the repository and submit a pr.
+Contributions are welcome! Feel free to fork the repository, tweak it and submit a pr.
 
 ### Acknowledgments
 Inspired by the **[minkv](https://github.com/galalen/minkv)** | **[py-caskdb](https://github.com/avinassh/py-caskdb)** | **[bitcask](https://github.com/basho/bitcask)** | **[tinykv](https://github.com/talent-plan/tinykv)**
