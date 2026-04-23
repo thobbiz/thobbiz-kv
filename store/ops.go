@@ -1,10 +1,11 @@
-package definitions
+package store
 
 import (
 	"fmt"
 	"time"
 )
 
+// Put takes in a key and a value and inserts them in the datastore.
 func (kv *KVStore) Put(key, value []byte) error {
 	if len(key) == 0 {
 		return fmt.Errorf("key cannot be empty")
@@ -29,9 +30,7 @@ func (kv *KVStore) Put(key, value []byte) error {
 	return nil
 }
 
-// Get takes the Key passed to it to retrieve the offset from the
-//
-// in-memory map then use it to retrieve the value from the data file
+// Get takes the Key passed to it and retrieves the Value stored with it from the datastore.
 func (kv *KVStore) Get(key []byte) ([]byte, error) {
 	if len(key) == 0 {
 		return nil, fmt.Errorf("key cannot be empty")
@@ -53,9 +52,7 @@ func (kv *KVStore) Get(key []byte) ([]byte, error) {
 	return record.Value, nil
 }
 
-// Delete takes the Key passed to it to insert a tombstone offset to the
-//
-// in-memory map it then use it to retrieve the value from the data file
+// Delete removes a Key from the datastore
 func (kv *KVStore) Delete(key []byte) error {
 	if len(key) == 0 {
 		return fmt.Errorf("key cannot be empty")

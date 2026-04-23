@@ -1,8 +1,11 @@
-package helpers
+package fileutil
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 func NewFile(filepath string) (*os.File, uint64, error) {
@@ -17,4 +20,18 @@ func NewFile(filepath string) (*os.File, uint64, error) {
 	}
 
 	return file, fileID, nil
+}
+
+func GenerateFileName(index int) string {
+	return string("store" + strconv.Itoa(index) + ".db")
+}
+
+func GenerateRandomID() (uint64, error) {
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	if err != nil {
+		return 0, err
+	}
+	// Convert the 8 bytes into a uint64
+	return binary.BigEndian.Uint64(b), nil
 }

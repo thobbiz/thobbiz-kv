@@ -5,12 +5,12 @@ import (
 	"sync"
 	"testing"
 
-	models "github.com/thobbiz/thobbixDB/definitions"
+	"github.com/thobbiz/thobbixDB/store"
 )
 
-func openTestStore(b *testing.B) *models.KVStore {
+func openTestStore(b *testing.B) *store.KVStore {
 	b.Helper()
-	kvStore, err := models.Open(b.TempDir())
+	kvStore, err := store.Open(b.TempDir())
 	if err != nil {
 		b.Fatal(err)
 	}

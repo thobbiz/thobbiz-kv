@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 
-	models "github.com/thobbiz/thobbixDB/definitions"
+	"github.com/thobbiz/thobbixDB/store"
 )
 
 func main() {
-	kvStore, err := models.Open("./data")
+	kvStore, err := store.Open("./data")
 	if err != nil {
 		log.Fatal(err)
 	}

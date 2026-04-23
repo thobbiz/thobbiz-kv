@@ -1,4 +1,4 @@
-package definitions
+package store
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/thobbiz/thobbixDB/helpers"
+	"github.com/thobbiz/thobbixDB/internal/fileutil"
 )
 
 const (
@@ -23,49 +23,6 @@ type KVStore struct {
 	mu           sync.RWMutex
 	keyTable     KeyTable
 	dataSegments *DataSegments
-}
-
-type KeyTable struct {
-	keyOffsetMap map[string]AppendRecordResponse
-}
-
-type DataSegments struct {
-	activeDS       *DataSegment
-	inactiveDS     map[uint64]*DataSegment
-	maxDSSizeBytes uint64
-}
-
-type DataSegment struct {
-	file   *os.File
-	fileId uint64
-}
-
-type AppendRecordResponse struct {
-	FileId uint64
-	Offset int64
-}
-
-type Record struct {
-	FileId    uint64
-	Key       []byte
-	Value     []byte
-	Timestamp uint32
-	TombStone bool
-}
-
-func NewStore() *KVStore {
-	KVStore := &KVStore{
-		keyTable: KeyTable{
-			keyOffsetMap: make(map[string]AppendRecordResponse),
-		},
-		dataSegments: &DataSegments{
-			activeDS:       &DataSegment{},
-			inactiveDS:     make(map[uint64]*DataSegment),
-			maxDSSizeBytes: MaxFileSize,
-		},
-	}
-
-	return KVStore
 }
 
 func Open(dataDir string) (*KVStore, error) {
@@ -86,8 +43,8 @@ func Open(dataDir string) (*KVStore, error) {
 	sort.Strings(fileNames)
 
 	if len(fileNames) == 0 {
-		fileName := helpers.GenerateFileName(1)
-		file, fileID, err := helpers.NewFile(fileName)
+		fileName := fileutil.GenerateFileName(1)
+		file, fileID, err := fileutil.NewFile(fileName)
 		if err != nil {
 			return nil, err
 		}
@@ -145,4 +102,19 @@ func (kv *KVStore) Close() error {
 	}
 
 	return firstErr
+}
+
+func NewStore() *KVStore {
+	KVStore := &KVStore{
+		keyTable: KeyTable{
+			keyOffsetMap: make(map[string]AppendRecordResponse),
+		},
+		dataSegments: &DataSegments{
+			activeDS:       &DataSegment{},
+			inactiveDS:     make(map[uint64]*DataSegment),
+			maxDSSizeBytes: MaxFileSize,
+		},
+	}
+
+	return KVStore
 }
