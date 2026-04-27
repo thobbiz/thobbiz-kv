@@ -1,5 +1,5 @@
 # thobbiz-kv
-thobbizKV is an append-only, persistent key-value store written in Go, modelled after the [Bitcask](https://riak.com/assets/bitcask-a-log-structured-hash-table-for-fast-key-value-data.pdf) storage model. All writes go to an active log segment, with an in-memory hash index mapping each key to its byte offset on disk. Reads are a single disk seek. I built it as a deep dive into storage engine internals and systems-level Go.
+thobbiz-kv is an append-only, persistent key-value store written in Go, modelled after the [Bitcask](https://riak.com/assets/bitcask-a-log-structured-hash-table-for-fast-key-value-data.pdf) storage model. All writes go to an active log segment, with an in-memory hash index mapping each key to its byte offset on disk. Reads are a single disk seek. I built it as a deep dive into storage engine internals and systems-level Go.
 
 ## How It Works
 - **Writes** are appended to the active data segment as fixed-format binary records.
